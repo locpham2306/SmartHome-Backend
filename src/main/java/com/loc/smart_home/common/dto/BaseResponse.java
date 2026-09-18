@@ -9,20 +9,20 @@ import lombok.Setter;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class ApiResponse<T>{
+public class BaseResponse<T>{
     private boolean success;
     private String strCode;
     private String message;
     private T data;
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(true, "Success", "Success",data);
+    public static <T> BaseResponse<T> success(T data) {
+        return new BaseResponse<>(true, "Success", "Success",data);
     }
 
-    public static <T> ApiResponse<T> error(String message) {
+    public static <T> BaseResponse<T> error(String message) {
         return error("ERROR", message);
     }
 
-    public static <T> ApiResponse<T> error(String strCode, String message) {
-        return new ApiResponse<>(false, strCode, message, null);
+    public static <T> BaseResponse<T> error(String strCode, String message) {
+        return new BaseResponse<>(false, strCode, message, null);
     }
 }

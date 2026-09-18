@@ -1,6 +1,6 @@
 package com.loc.smart_home.exception;
 
-import com.loc.smart_home.common.dto.ApiResponse;
+import com.loc.smart_home.common.dto.BaseResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -17,31 +17,31 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
-        return ResponseEntity.status(exception.getStatus()).body(ApiResponse.<Void>error(exception.getStrCode(), exception.getMessage()));
+    public ResponseEntity<BaseResponse<Void>> handleBusinessException(BusinessException exception) {
+        return ResponseEntity.status(exception.getStatus()).body(BaseResponse.<Void>error(exception.getStrCode(), exception.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException exception) {
+    public ResponseEntity<BaseResponse<Void>> handleValidationException(MethodArgumentNotValidException exception) {
         String message = exception.getBindingResult().getAllErrors().stream().map(error -> error.getDefaultMessage() != null ? error.getDefaultMessage() : "Invalid value").distinct().collect(Collectors.joining("; "));
-        return ResponseEntity.badRequest().body(ApiResponse.<Void>error("VALIDATION_ERROR",message));
+        return ResponseEntity.badRequest().body(BaseResponse.<Void>error("VALIDATION_ERROR",message));
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponse<Void>> handleInvalidBody(HttpMessageNotReadableException exception) {
-        return ResponseEntity.badRequest().body(ApiResponse.<Void>error("INVALID_REQUEST_BODY","Invalid request body"));
+    public ResponseEntity<BaseResponse<Void>> handleInvalidBody(HttpMessageNotReadableException exception) {
+        return ResponseEntity.badRequest().body(BaseResponse.<Void>error("INVALID_REQUEST_BODY","Invalid request body"));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
+    public ResponseEntity<BaseResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException exception) {
         String message = "Invalid value for parameter: " + exception.getName();
-        return ResponseEntity.badRequest().body(ApiResponse.<Void>error( "PARAMETER_TYPE_MISMATCH",message));
+        return ResponseEntity.badRequest().body(BaseResponse.<Void>error( "PARAMETER_TYPE_MISMATCH",message));
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+    public ResponseEntity<BaseResponse<Void>> handleUnexpectedException(Exception exception) {
         log.error("Unexpected error while processing request", exception);
-        return ResponseEntity.internalServerError().body(ApiResponse.<Void>error("INTERNAL_SERVER_ERROR","Internal server error"));
+        return ResponseEntity.internalServerError().body(BaseResponse.<Void>error("INTERNAL_SERVER_ERROR","Internal server error"));
     }
 
 }

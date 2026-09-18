@@ -37,6 +37,6 @@ public class User extends BaseEntity {
     private String figmaLink;
 
     @Column(name = "apidocs_link", length = 500)
-    private String apidocsLink;
+    private String apiDocsLink;
 
 }
