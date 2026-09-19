@@ -5,7 +5,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface BaseMapper<E, RP> {
-    RP  toResponse(E entity);
+    RP toResponse(E entity);
 
     List<RP> toResponseList(List<E> entities);
 
