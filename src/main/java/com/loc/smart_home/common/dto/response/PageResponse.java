@@ -1,4 +1,4 @@
-package com.loc.smart_home.common.dto;
+package com.loc.smart_home.common.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

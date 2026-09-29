@@ -1,6 +1,6 @@
 package com.loc.smart_home.exception;
 
-import com.loc.smart_home.common.dto.BaseResponse;
+import com.loc.smart_home.common.dto.response.BaseResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;

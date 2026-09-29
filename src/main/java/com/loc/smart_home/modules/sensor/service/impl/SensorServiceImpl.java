@@ -1,12 +1,18 @@
 package com.loc.smart_home.modules.sensor.service.impl;
 
+import com.loc.smart_home.common.dto.response.PageResponse;
 import com.loc.smart_home.exception.BusinessException;
 import com.loc.smart_home.integration.mqtt.dto.SensorMessage;
+import com.loc.smart_home.modules.sensor.dto.request.SensorPageableSearchRequestDTO;
+import com.loc.smart_home.modules.sensor.dto.request.SensorSearchRequest;
+import com.loc.smart_home.modules.sensor.dto.response.DataSensorResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import com.loc.smart_home.modules.sensor.entity.Sensor;
+import com.loc.smart_home.modules.sensor.mapper.DataSensorMapper;
 import com.loc.smart_home.modules.sensor.repository.DataSensorRepository;
 import com.loc.smart_home.modules.sensor.repository.SensorRepository;
 import com.loc.smart_home.modules.sensor.service.SensorService;
+import com.loc.smart_home.utils.PageableSearchUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -16,6 +22,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +31,7 @@ public class SensorServiceImpl implements SensorService {
 
     private final SensorRepository sensorRepository;
     private final DataSensorRepository dataSensorRepository;
+    private final DataSensorMapper dataSensorMapper;
 
     @Override
     @Transactional
@@ -41,6 +50,8 @@ public class SensorServiceImpl implements SensorService {
 
         this.dataSensorRepository.saveAll(List.of(temperatureData, humidityData, lightData));
     }
+
+
 
     private void validateMessage(SensorMessage message) {
         if (message == null || message.getTemperature() == null || message.getHumidity() == null || message.getLight() == null) {
@@ -70,4 +81,57 @@ public class SensorServiceImpl implements SensorService {
         dataSensor.setTime(time);
         return dataSensor;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<DataSensorResponse> search(
+            SensorPageableSearchRequestDTO request
+    ) {
+        SensorSearchRequest searchRequest = request.getSearchRequest();
+
+        String field = searchRequest.getField();
+        String keywordPattern = buildKeywordPattern(
+                searchRequest.getKeywords()
+        );
+
+        return PageableSearchUtils.<DataSensor, DataSensorResponse>search(
+                pageable -> dataSensorRepository.search(
+                        field,
+                        keywordPattern,
+                        pageable
+                ),
+                request.getPageRequest(),
+                ALLOWED_SORT_FIELDS,
+                dataSensorMapper::toResponse
+        );
+    }
+
+    private String buildKeywordPattern(String keywords) {
+        if (keywords == null) {
+            return null;
+        }
+
+        String keyword = keywords.trim().toLowerCase(Locale.ROOT);
+
+        // Cho phép nhập ID dạng #123
+        if (keyword.startsWith("#")) {
+            keyword = keyword.substring(1);
+        }
+
+        if (keyword.isEmpty()) {
+            return null;
+        }
+
+        // Tìm đúng ký tự người dùng nhập,
+        // không coi % và _ là ký tự đại diện của LIKE.
+        keyword = keyword
+                .replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_");
+
+        return "%" + keyword + "%";
+    }
+
+    private static final Set<String> ALLOWED_SORT_FIELDS =
+            Set.of("id", "time", "value");
 }

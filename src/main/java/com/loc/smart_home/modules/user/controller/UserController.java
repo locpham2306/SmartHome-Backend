@@ -1,6 +1,6 @@
 package com.loc.smart_home.modules.user.controller;
 
-import com.loc.smart_home.common.dto.BaseResponse;
+import com.loc.smart_home.common.dto.response.BaseResponse;
 import com.loc.smart_home.modules.user.dto.response.UserResponse;
 import com.loc.smart_home.modules.user.service.UserService;
 import lombok.RequiredArgsConstructor;

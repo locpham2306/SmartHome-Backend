@@ -103,6 +103,12 @@
             <artifactId>mapstruct</artifactId>
             <version>${mapstruct.version}</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.turkraft.springfilter</groupId>
+            <artifactId>jpa</artifactId>
+            <version>4.1.0</version>
+        </dependency>
     </dependencies>
 
     <build>
