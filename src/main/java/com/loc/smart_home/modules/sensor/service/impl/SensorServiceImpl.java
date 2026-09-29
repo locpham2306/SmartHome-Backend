@@ -6,6 +6,7 @@ import com.loc.smart_home.integration.mqtt.dto.SensorMessage;
 import com.loc.smart_home.modules.sensor.dto.request.SensorPageableSearchRequestDTO;
 import com.loc.smart_home.modules.sensor.dto.request.SensorSearchRequest;
 import com.loc.smart_home.modules.sensor.dto.response.DataSensorResponse;
+import com.loc.smart_home.modules.sensor.dto.response.SensorLatestResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import com.loc.smart_home.modules.sensor.entity.Sensor;
 import com.loc.smart_home.modules.sensor.mapper.DataSensorMapper;
@@ -106,6 +107,15 @@ public class SensorServiceImpl implements SensorService {
         );
     }
 
+    @Override
+    public SensorLatestResponse getLatest() {
+        DataSensorResponse temperature = getLatestByName("Temperature");
+        DataSensorResponse humidity = getLatestByName("Humidity");
+        DataSensorResponse light = getLatestByName("Light");
+
+        return new SensorLatestResponse(temperature,humidity, light);
+    }
+
     private String buildKeywordPattern(String keywords) {
         if (keywords == null) {
             return null;
@@ -134,4 +144,8 @@ public class SensorServiceImpl implements SensorService {
 
     private static final Set<String> ALLOWED_SORT_FIELDS =
             Set.of("id", "time", "value");
+    private DataSensorResponse getLatestByName(String name){
+        return this.dataSensorRepository.findFirstBySensor_NameOrderByTimeDescIdDesc(name).map(dataSensorMapper::toResponse).orElse(null);
+    }
 }
+

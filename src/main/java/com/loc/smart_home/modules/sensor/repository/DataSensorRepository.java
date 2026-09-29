@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 @Repository
 public interface DataSensorRepository
         extends JpaRepository<DataSensor, Long> {
@@ -23,5 +25,10 @@ public interface DataSensorRepository
             @Param("field") String field,
             @Param("keywordPattern") String keywordPattern,
             Pageable pageable
+    );
+
+    @EntityGraph(attributePaths = "sensor")
+    Optional<DataSensor> findFirstBySensor_NameOrderByTimeDescIdDesc(
+            String sensorName
     );
 }
