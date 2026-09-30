@@ -10,6 +10,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -30,5 +32,14 @@ public interface DataSensorRepository
     @EntityGraph(attributePaths = "sensor")
     Optional<DataSensor> findFirstBySensor_NameOrderByTimeDescIdDesc(
             String sensorName
+    );
+
+    @EntityGraph(attributePaths = "sensor")
+    @Query(DataSensorQueries.CHART)
+    List<DataSensor> findChartData(
+            @Param("type") String type,
+            @Param("startTime") LocalDateTime startTime,
+            @Param("endTime") LocalDateTime endTime,
+            Pageable pageable
     );
 }

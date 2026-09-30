@@ -2,6 +2,7 @@ package com.loc.smart_home.modules.sensor.mapper;
 
 import com.loc.smart_home.common.base.BaseMapper;
 import com.loc.smart_home.modules.sensor.dto.response.DataSensorResponse;
+import com.loc.smart_home.modules.sensor.dto.response.SensorChartPointResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -19,6 +20,10 @@ public interface DataSensorMapper extends BaseMapper<DataSensor, DataSensorRespo
             qualifiedByName = "resolveUnit"
     )
     DataSensorResponse toResponse(DataSensor entity);
+
+    @Mapping(target = "type", source = "sensor.name")
+    SensorChartPointResponse toChartPointResponse(DataSensor entity);
+
     @Named("resolveUnit")
     default String resolveUnit(String sensorName){
         if (sensorName == null){

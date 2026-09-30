@@ -14,7 +14,7 @@ public class SensorSearchRequest {
 
     @NotBlank(message = "field is required")
     @Pattern(
-            regexp = "all|time|Light|Temperature|Humidity",
+            regexp = "all|time|Light|Temperature|Humidity|light|temperature|humidity",
             message = "field must be all, time, Light, Temperature or Humidity"
     )
     private String field = "all";

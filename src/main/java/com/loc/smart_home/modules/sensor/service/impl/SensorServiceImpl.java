@@ -3,9 +3,11 @@ package com.loc.smart_home.modules.sensor.service.impl;
 import com.loc.smart_home.common.dto.response.PageResponse;
 import com.loc.smart_home.exception.BusinessException;
 import com.loc.smart_home.integration.mqtt.dto.SensorMessage;
+import com.loc.smart_home.modules.sensor.dto.request.SensorChartRequest;
 import com.loc.smart_home.modules.sensor.dto.request.SensorPageableSearchRequestDTO;
 import com.loc.smart_home.modules.sensor.dto.request.SensorSearchRequest;
 import com.loc.smart_home.modules.sensor.dto.response.DataSensorResponse;
+import com.loc.smart_home.modules.sensor.dto.response.SensorChartPointResponse;
 import com.loc.smart_home.modules.sensor.dto.response.SensorLatestResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import com.loc.smart_home.modules.sensor.entity.Sensor;
@@ -15,6 +17,8 @@ import com.loc.smart_home.modules.sensor.repository.SensorRepository;
 import com.loc.smart_home.modules.sensor.service.SensorService;
 import com.loc.smart_home.utils.PageableSearchUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,9 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Locale;
-import java.util.Set;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -114,6 +116,30 @@ public class SensorServiceImpl implements SensorService {
         DataSensorResponse light = getLatestByName("Light");
 
         return new SensorLatestResponse(temperature,humidity, light);
+    }
+
+    @Override
+    public List<SensorChartPointResponse> getChart(SensorChartRequest request) {
+        LocalDateTime startTime = request.getStartTime();
+        LocalDateTime endTime = request.getEndTime();
+        if(startTime == null && endTime == null){
+            endTime = LocalDateTime.now();
+            startTime = endTime.minusHours(1);
+        }
+        else if(startTime == null || endTime == null){
+            throw new BusinessException("INVALID_TIME_RANGE", "Start time and end time must be provided together");
+        }
+        if(startTime.isAfter(endTime)){
+            throw new BusinessException("INVALID_TIME_RANGE", "End time must be greater than start time");
+        }
+        Pageable pageable = PageRequest.of(0, request.getLimit());
+        List<DataSensor> entities = this.dataSensorRepository.findChartData(request.getType(),startTime ,endTime, pageable);
+        List<SensorChartPointResponse> points = new ArrayList<>();
+        for(DataSensor entity : entities){
+            points.add(dataSensorMapper.toChartPointResponse(entity));
+        }
+        Collections.reverse(points);
+        return points;
     }
 
     private String buildKeywordPattern(String keywords) {

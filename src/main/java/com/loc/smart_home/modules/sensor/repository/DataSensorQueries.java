@@ -49,6 +49,16 @@ public final class DataSensorQueries {
     public static final String COUNT_SEARCH =
             "SELECT COUNT(ds) " + SEARCH_FROM_WHERE;
 
+    public static final String CHART = """
+            SELECT ds
+             FROM DataSensor ds
+             JOIN ds.sensor s
+             WHERE s.name = :type
+             AND ds.time >= :startTime
+             AND ds.time <= :endTime
+             ORDER BY ds.time DESC, ds.id DESC
+            """;
+
     private DataSensorQueries() {
     }
 }
