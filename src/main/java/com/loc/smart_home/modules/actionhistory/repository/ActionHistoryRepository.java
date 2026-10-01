@@ -23,4 +23,9 @@ public interface ActionHistoryRepository extends JpaRepository<ActionHistory,Lon
             @Param("actionStatus") ActionStatus actionStatus,
             Pageable pageable
     );
+
+    boolean existsByDevice_IdAndStatus(
+            Integer deviceId,
+            ActionStatus status
+    );
 }
