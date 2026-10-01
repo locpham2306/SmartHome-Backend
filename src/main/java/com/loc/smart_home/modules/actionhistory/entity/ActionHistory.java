@@ -1,9 +1,9 @@
 package com.loc.smart_home.modules.actionhistory.entity;
 
 import com.loc.smart_home.common.base.BaseEntity;
+import com.loc.smart_home.modules.actionhistory.enums.Action;
 import com.loc.smart_home.modules.actionhistory.enums.ActionStatus;
 import com.loc.smart_home.modules.device.entity.Device;
-import com.loc.smart_home.modules.device.enums.DeviceStatus;
 import com.loc.smart_home.modules.user.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -41,7 +41,7 @@ public class ActionHistory extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "action", nullable = false, length = 20)
-    private DeviceStatus action;
+    private Action action;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 50)
