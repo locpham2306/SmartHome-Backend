@@ -22,12 +22,14 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -168,5 +170,33 @@ public class DeviceServiceImpl implements DeviceService {
                                                         ? DeviceStatus.ON
                                                         : DeviceStatus.OFF);
                 }
+        }
+
+        @Override
+        @Transactional(readOnly = true)
+        public List<Long> findExpiredCommandIds(LocalDateTime cutoff) {
+                return actionHistoryRepository.findExpiredIds(
+                                ActionStatus.PENDING,
+                                cutoff,
+                                PageRequest.of(0, 100));
+        }
+
+        @Override
+        @Transactional
+        public void timeoutCommand(Long historyId, LocalDateTime cutoff) {
+                ActionHistory history = actionHistoryRepository
+                                .findWithLockById(historyId)
+                                .orElse(null);
+
+                if (history == null
+                                || history.getStatus() != ActionStatus.PENDING) {
+                        return;
+                }
+
+                if (history.getCreatedAt().isAfter(cutoff)) {
+                        return;
+                }
+
+                history.setStatus(ActionStatus.TIMEOUT);
         }
 }

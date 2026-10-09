@@ -5,6 +5,7 @@ import com.loc.smart_home.modules.device.dto.request.DeviceControlRequest;
 import com.loc.smart_home.modules.device.dto.response.DeviceControlResponse;
 import com.loc.smart_home.modules.device.dto.response.DeviceResponse;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import com.loc.smart_home.modules.actionhistory.enums.Action;
@@ -19,4 +20,8 @@ public interface DeviceService {
             Long historyId,
             Action action,
             ActionStatus status);
+
+    List<Long> findExpiredCommandIds(LocalDateTime cutoff);
+
+    void timeoutCommand(Long historyId, LocalDateTime cutoff);
 }
