@@ -10,6 +10,7 @@ import com.loc.smart_home.modules.device.dto.response.DeviceControlResponse;
 import com.loc.smart_home.modules.device.dto.response.DeviceResponse;
 import com.loc.smart_home.modules.device.entity.Device;
 import com.loc.smart_home.modules.device.enums.DeviceStatus;
+import com.loc.smart_home.modules.device.event.DeviceCommandStatusChangedEvent;
 import com.loc.smart_home.modules.device.mapper.DeviceMapper;
 import com.loc.smart_home.modules.device.repository.DeviceRepository;
 import com.loc.smart_home.modules.device.service.DeviceService;
@@ -22,10 +23,14 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.nio.charset.StandardCharsets;
@@ -41,6 +46,8 @@ public class DeviceServiceImpl implements DeviceService {
         private final ActionHistoryRepository actionHistoryRepository;
         private final ObjectProvider<MqttClient> mqttClientProvider;
         private final UserRepository userRepository;
+        private final ApplicationEventPublisher eventPublisher;
+        private final PlatformTransactionManager transactionManager;
 
         @Value("${user-id}")
         private Long userId;
@@ -100,8 +107,7 @@ public class DeviceServiceImpl implements DeviceService {
                         MqttClient mqttClient = mqttClientProvider.getObject();
                         mqttClient.publish(topic, message);
                 } catch (MqttException exception) {
-                        savedHistory.setStatus(ActionStatus.ERROR);
-                        actionHistoryRepository.save(savedHistory);
+                        markPublishFailed(savedHistory.getId());
 
                         throw new BusinessException(
                                         HttpStatus.SERVICE_UNAVAILABLE,
@@ -170,6 +176,8 @@ public class DeviceServiceImpl implements DeviceService {
                                                         ? DeviceStatus.ON
                                                         : DeviceStatus.OFF);
                 }
+
+                publishCommandStatus(history);
         }
 
         @Override
@@ -198,5 +206,33 @@ public class DeviceServiceImpl implements DeviceService {
                 }
 
                 history.setStatus(ActionStatus.TIMEOUT);
+                publishCommandStatus(history);
+        }
+
+        private void publishCommandStatus(ActionHistory history) {
+                eventPublisher.publishEvent(
+                                new DeviceCommandStatusChangedEvent(
+                                                deviceMapper.toCommandStatusResponse(history)));
+        }
+
+        private void markPublishFailed(Long historyId) {
+                TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+
+                transaction.setPropagationBehavior(
+                                TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+
+                transaction.executeWithoutResult(transactionStatus -> {
+                        ActionHistory history = actionHistoryRepository
+                                        .findWithLockById(historyId)
+                                        .orElse(null);
+
+                        if (history == null
+                                        || history.getStatus() != ActionStatus.PENDING) {
+                                return;
+                        }
+
+                        history.setStatus(ActionStatus.ERROR);
+                        publishCommandStatus(history);
+                });
         }
 }
