@@ -11,12 +11,15 @@ import com.loc.smart_home.modules.sensor.dto.response.SensorChartPointResponse;
 import com.loc.smart_home.modules.sensor.dto.response.SensorLatestResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import com.loc.smart_home.modules.sensor.entity.Sensor;
+import com.loc.smart_home.modules.sensor.event.SensorDataSavedEvent;
 import com.loc.smart_home.modules.sensor.mapper.DataSensorMapper;
 import com.loc.smart_home.modules.sensor.repository.DataSensorRepository;
 import com.loc.smart_home.modules.sensor.repository.SensorRepository;
 import com.loc.smart_home.modules.sensor.service.SensorService;
 import com.loc.smart_home.utils.PageableSearchUtils;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -36,6 +39,7 @@ public class SensorServiceImpl implements SensorService {
     private final SensorRepository sensorRepository;
     private final DataSensorRepository dataSensorRepository;
     private final DataSensorMapper dataSensorMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -53,6 +57,14 @@ public class SensorServiceImpl implements SensorService {
         DataSensor lightData = createDataSensor(light, message.getLight(), time);
 
         this.dataSensorRepository.saveAll(List.of(temperatureData, humidityData, lightData));
+
+        SensorLatestResponse response = new SensorLatestResponse(
+                dataSensorMapper.toResponse(temperatureData),
+                dataSensorMapper.toResponse(humidityData),
+                dataSensorMapper.toResponse(lightData));
+
+        eventPublisher.publishEvent(
+                new SensorDataSavedEvent(response));
     }
 
     private void validateMessage(SensorMessage message) {
