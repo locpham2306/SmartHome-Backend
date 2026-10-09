@@ -20,5 +20,8 @@ public class MqttProperties {
 
     private String sensorTopic;
 
+    private String actionStatusTopic;
+
+
     private int qos;
 }

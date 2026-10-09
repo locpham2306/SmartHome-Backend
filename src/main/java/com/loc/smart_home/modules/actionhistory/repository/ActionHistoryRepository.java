@@ -10,22 +10,26 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
+
+import java.util.Optional;
 
 @Repository
-public interface ActionHistoryRepository extends JpaRepository<ActionHistory,Long> {
-    @EntityGraph(attributePaths = {"device","user"})
-    @Query(value = ActionHistoryQueries.SEARCH,
-    countQuery = ActionHistoryQueries.COUNT_SEARCH)
-    Page<ActionHistory> search(
-            @Param("time") String time,
-            @Param("device") String device,
-            @Param("action") Action action,
-            @Param("actionStatus") ActionStatus actionStatus,
-            Pageable pageable
-    );
+public interface ActionHistoryRepository extends JpaRepository<ActionHistory, Long> {
+        @EntityGraph(attributePaths = { "device", "user" })
+        @Query(value = ActionHistoryQueries.SEARCH, countQuery = ActionHistoryQueries.COUNT_SEARCH)
+        Page<ActionHistory> search(
+                        @Param("time") String time,
+                        @Param("device") String device,
+                        @Param("action") Action action,
+                        @Param("actionStatus") ActionStatus actionStatus,
+                        Pageable pageable);
 
-    boolean existsByDevice_IdAndStatus(
-            Integer deviceId,
-            ActionStatus status
-    );
+        boolean existsByDevice_IdAndStatus(
+                        Integer deviceId,
+                        ActionStatus status);
+
+        @Lock(LockModeType.PESSIMISTIC_WRITE)
+        Optional<ActionHistory> findWithLockById(Long id);
 }
