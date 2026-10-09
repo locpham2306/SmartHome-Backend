@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -54,13 +55,13 @@ public class SensorServiceImpl implements SensorService {
         this.dataSensorRepository.saveAll(List.of(temperatureData, humidityData, lightData));
     }
 
-
-
     private void validateMessage(SensorMessage message) {
-        if (message == null || message.getTemperature() == null || message.getHumidity() == null || message.getLight() == null) {
+        if (message == null || message.getTemperature() == null || message.getHumidity() == null
+                || message.getLight() == null) {
             throw new BusinessException("INVALID_SENSOR_DATA", "Temperature, Humidity, Light are required");
         }
-        if (message.getHumidity().compareTo(BigDecimal.ZERO) < 0 || message.getHumidity().compareTo(BigDecimal.valueOf(100)) > 0) {
+        if (message.getHumidity().compareTo(BigDecimal.ZERO) < 0
+                || message.getHumidity().compareTo(BigDecimal.valueOf(100)) > 0) {
             throw new BusinessException("INVALID_HUMIDITY", "Humidity must be between 0 and 100");
         }
         if (message.getLight().compareTo(BigDecimal.ZERO) < 0) {
@@ -69,13 +70,14 @@ public class SensorServiceImpl implements SensorService {
     }
 
     private Sensor getSensorByName(String name) {
-        return this.sensorRepository.findByName(name).orElseThrow(() -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "SENSOR_CONFIGURATION_MISSING",
-                "Sensor configuration not found: " + name));
+        return this.sensorRepository.findByName(name).orElseThrow(
+                () -> new BusinessException(HttpStatus.INTERNAL_SERVER_ERROR, "SENSOR_CONFIGURATION_MISSING",
+                        "Sensor configuration not found: " + name));
     }
 
-    private DataSensor createDataSensor(Sensor sensor, BigDecimal value, LocalDateTime time){
+    private DataSensor createDataSensor(Sensor sensor, BigDecimal value, LocalDateTime time) {
         BigDecimal roundedValue = value.setScale(2, RoundingMode.HALF_UP);
-        if (roundedValue.abs().compareTo(BigDecimal.valueOf(99999999.99)) > 0){
+        if (roundedValue.abs().compareTo(BigDecimal.valueOf(99999999.99)) > 0) {
             throw new BusinessException("SENSOR_VALUE_OUT_OF_RANGE", "Sensor value exceeds database precision");
         }
         DataSensor dataSensor = new DataSensor();
@@ -88,25 +90,52 @@ public class SensorServiceImpl implements SensorService {
     @Override
     @Transactional(readOnly = true)
     public PageResponse<DataSensorResponse> search(
-            SensorPageableSearchRequestDTO request
-    ) {
+            SensorPageableSearchRequestDTO request) {
         SensorSearchRequest searchRequest = request.getSearchRequest();
+
+        LocalDate startDate = searchRequest.getStartDate();
+        LocalDate endDate = searchRequest.getEndDate();
+
+        if ((startDate == null) != (endDate == null)) {
+            throw new BusinessException(
+                    "INVALID_DATE_RANGE",
+                    "Start date and end date must be provided together");
+        }
+
+        if (startDate != null && startDate.isAfter(endDate)) {
+            throw new BusinessException(
+                    "INVALID_DATE_RANGE",
+                    "Start date must not be after end date");
+        }
+
+        if (LocalDate.MAX.equals(endDate)) {
+            throw new BusinessException(
+                    "INVALID_DATE_RANGE",
+                    "End date exceeds the supported range");
+        }
+
+        LocalDateTime startTime = startDate == null
+                ? null
+                : startDate.atStartOfDay();
+
+        LocalDateTime endTimeExclusive = endDate == null
+                ? null
+                : endDate.plusDays(1).atStartOfDay();
 
         String field = searchRequest.getField();
         String keywordPattern = buildKeywordPattern(
-                searchRequest.getKeywords()
-        );
+                searchRequest.getKeywords());
 
         return PageableSearchUtils.<DataSensor, DataSensorResponse>search(
                 pageable -> dataSensorRepository.search(
                         field,
                         keywordPattern,
-                        pageable
-                ),
+                        startTime,
+                        endTimeExclusive,
+                        pageable),
                 request.getPageRequest(),
                 ALLOWED_SORT_FIELDS,
-                dataSensorMapper::toResponse
-        );
+                dataSensorMapper::toResponse);
     }
 
     @Override
@@ -115,27 +144,27 @@ public class SensorServiceImpl implements SensorService {
         DataSensorResponse humidity = getLatestByName("Humidity");
         DataSensorResponse light = getLatestByName("Light");
 
-        return new SensorLatestResponse(temperature,humidity, light);
+        return new SensorLatestResponse(temperature, humidity, light);
     }
 
     @Override
     public List<SensorChartPointResponse> getChart(SensorChartRequest request) {
         LocalDateTime startTime = request.getStartTime();
         LocalDateTime endTime = request.getEndTime();
-        if(startTime == null && endTime == null){
+        if (startTime == null && endTime == null) {
             endTime = LocalDateTime.now();
             startTime = endTime.minusHours(1);
-        }
-        else if(startTime == null || endTime == null){
+        } else if (startTime == null || endTime == null) {
             throw new BusinessException("INVALID_TIME_RANGE", "Start time and end time must be provided together");
         }
-        if(startTime.isAfter(endTime)){
+        if (startTime.isAfter(endTime)) {
             throw new BusinessException("INVALID_TIME_RANGE", "End time must be greater than start time");
         }
         Pageable pageable = PageRequest.of(0, request.getLimit());
-        List<DataSensor> entities = this.dataSensorRepository.findChartData(request.getType(),startTime ,endTime, pageable);
+        List<DataSensor> entities = this.dataSensorRepository.findChartData(request.getType(), startTime, endTime,
+                pageable);
         List<SensorChartPointResponse> points = new ArrayList<>();
-        for(DataSensor entity : entities){
+        for (DataSensor entity : entities) {
             points.add(dataSensorMapper.toChartPointResponse(entity));
         }
         Collections.reverse(points);
@@ -168,10 +197,10 @@ public class SensorServiceImpl implements SensorService {
         return "%" + keyword + "%";
     }
 
-    private static final Set<String> ALLOWED_SORT_FIELDS =
-            Set.of("id", "time", "value");
-    private DataSensorResponse getLatestByName(String name){
-        return this.dataSensorRepository.findFirstBySensor_NameOrderByTimeDescIdDesc(name).map(dataSensorMapper::toResponse).orElse(null);
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id", "time", "value");
+
+    private DataSensorResponse getLatestByName(String name) {
+        return this.dataSensorRepository.findFirstBySensor_NameOrderByTimeDescIdDesc(name)
+                .map(dataSensorMapper::toResponse).orElse(null);
     }
 }
-

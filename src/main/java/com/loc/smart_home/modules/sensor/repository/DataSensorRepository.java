@@ -16,30 +16,26 @@ import java.util.Optional;
 
 @Repository
 public interface DataSensorRepository
-        extends JpaRepository<DataSensor, Long> {
+                extends JpaRepository<DataSensor, Long> {
 
-    @EntityGraph(attributePaths = "sensor")
-    @Query(
-            value = DataSensorQueries.SEARCH,
-            countQuery = DataSensorQueries.COUNT_SEARCH
-    )
-    Page<DataSensor> search(
-            @Param("field") String field,
-            @Param("keywordPattern") String keywordPattern,
-            Pageable pageable
-    );
+        @EntityGraph(attributePaths = "sensor")
+        @Query(value = DataSensorQueries.SEARCH, countQuery = DataSensorQueries.COUNT_SEARCH)
+        Page<DataSensor> search(
+                        @Param("field") String field,
+                        @Param("keywordPattern") String keywordPattern,
+                        @Param("startTime") LocalDateTime startTime,
+                        @Param("endTimeExclusive") LocalDateTime endTimeExclusive,
+                        Pageable pageable);
 
-    @EntityGraph(attributePaths = "sensor")
-    Optional<DataSensor> findFirstBySensor_NameOrderByTimeDescIdDesc(
-            String sensorName
-    );
+        @EntityGraph(attributePaths = "sensor")
+        Optional<DataSensor> findFirstBySensor_NameOrderByTimeDescIdDesc(
+                        String sensorName);
 
-    @EntityGraph(attributePaths = "sensor")
-    @Query(DataSensorQueries.CHART)
-    List<DataSensor> findChartData(
-            @Param("type") String type,
-            @Param("startTime") LocalDateTime startTime,
-            @Param("endTime") LocalDateTime endTime,
-            Pageable pageable
-    );
+        @EntityGraph(attributePaths = "sensor")
+        @Query(DataSensorQueries.CHART)
+        List<DataSensor> findChartData(
+                        @Param("type") String type,
+                        @Param("startTime") LocalDateTime startTime,
+                        @Param("endTime") LocalDateTime endTime,
+                        Pageable pageable);
 }
