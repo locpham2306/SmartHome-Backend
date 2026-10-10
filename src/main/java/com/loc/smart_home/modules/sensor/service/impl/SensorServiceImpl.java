@@ -1,6 +1,7 @@
 package com.loc.smart_home.modules.sensor.service.impl;
 
 import com.loc.smart_home.common.dto.response.PageResponse;
+import com.loc.smart_home.config.SensorThresholdProperties;
 import com.loc.smart_home.exception.BusinessException;
 import com.loc.smart_home.integration.mqtt.dto.SensorMessage;
 import com.loc.smart_home.modules.sensor.dto.request.SensorChartRequest;
@@ -11,6 +12,7 @@ import com.loc.smart_home.modules.sensor.dto.response.SensorChartPointResponse;
 import com.loc.smart_home.modules.sensor.dto.response.SensorLatestResponse;
 import com.loc.smart_home.modules.sensor.entity.DataSensor;
 import com.loc.smart_home.modules.sensor.entity.Sensor;
+import com.loc.smart_home.modules.sensor.enums.SensorAlertStatus;
 import com.loc.smart_home.modules.sensor.event.SensorDataSavedEvent;
 import com.loc.smart_home.modules.sensor.mapper.DataSensorMapper;
 import com.loc.smart_home.modules.sensor.repository.DataSensorRepository;
@@ -40,6 +42,7 @@ public class SensorServiceImpl implements SensorService {
     private final DataSensorRepository dataSensorRepository;
     private final DataSensorMapper dataSensorMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final SensorThresholdProperties thresholdProperties;
 
     @Override
     @Transactional
@@ -58,10 +61,11 @@ public class SensorServiceImpl implements SensorService {
 
         this.dataSensorRepository.saveAll(List.of(temperatureData, humidityData, lightData));
 
-        SensorLatestResponse response = new SensorLatestResponse(
+        SensorLatestResponse response = buildLatestResponse(
                 dataSensorMapper.toResponse(temperatureData),
                 dataSensorMapper.toResponse(humidityData),
-                dataSensorMapper.toResponse(lightData));
+                dataSensorMapper.toResponse(lightData)
+        );
 
         eventPublisher.publishEvent(
                 new SensorDataSavedEvent(response));
@@ -156,7 +160,7 @@ public class SensorServiceImpl implements SensorService {
         DataSensorResponse humidity = getLatestByName("Humidity");
         DataSensorResponse light = getLatestByName("Light");
 
-        return new SensorLatestResponse(temperature, humidity, light);
+        return buildLatestResponse(temperature, humidity, light);
     }
 
     @Override
@@ -214,5 +218,61 @@ public class SensorServiceImpl implements SensorService {
     private DataSensorResponse getLatestByName(String name) {
         return this.dataSensorRepository.findFirstBySensor_NameOrderByTimeDescIdDesc(name)
                 .map(dataSensorMapper::toResponse).orElse(null);
+    }
+
+    private SensorAlertStatus resolveAlertStatus(
+            DataSensorResponse reading,
+            SensorThresholdProperties.Threshold threshold
+    ) {
+        if (reading == null || reading.getValue() == null) {
+            return SensorAlertStatus.UNKNOWN;
+        }
+
+        BigDecimal value = reading.getValue();
+
+        if (value.compareTo(threshold.getLower()) < 0) {
+            return SensorAlertStatus.LOW;
+        }
+
+        if (value.compareTo(threshold.getUpper()) > 0) {
+            return SensorAlertStatus.HIGH;
+        }
+
+        return SensorAlertStatus.NORMAL;
+    }
+
+    private SensorLatestResponse buildLatestResponse(
+            DataSensorResponse temperature,
+            DataSensorResponse humidity,
+            DataSensorResponse light
+    ) {
+        SensorLatestResponse response = new SensorLatestResponse();
+
+        response.setTemperature(temperature);
+        response.setHumidity(humidity);
+        response.setLight(light);
+
+        response.setTemperatureAlertStatus(
+                resolveAlertStatus(
+                        temperature,
+                        thresholdProperties.getTemperature()
+                )
+        );
+
+        response.setHumidityAlertStatus(
+                resolveAlertStatus(
+                        humidity,
+                        thresholdProperties.getHumidity()
+                )
+        );
+
+        response.setLightAlertStatus(
+                resolveAlertStatus(
+                        light,
+                        thresholdProperties.getLight()
+                )
+        );
+
+        return response;
     }
 }
